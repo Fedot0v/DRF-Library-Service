@@ -1,4 +1,6 @@
-from rest_framework import viewsets, permissions
+from django.utils import timezone
+from rest_framework import viewsets, permissions, status
+from rest_framework.response import Response
 
 from borrowings.models import Borrowing
 from borrowings.serializers import (
@@ -42,3 +44,26 @@ class BorrowingViewSet(viewsets.ModelViewSet):
         if self.action == "retrieve":
             return BorrowingDetailSerializer
         return BorrowingSerializer
+
+    def return_book(self, request, pk=None):
+        try:
+            borrowing = self.get_object()
+            if borrowing.actual_return_date is not None:
+                return Response(
+                    {"detail": "This book has already been returned."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            borrowing.actual_return_date = timezone.now()
+            borrowing.book.inventory += 1
+            borrowing.book.save()
+            borrowing.save()
+
+            return Response(
+                BorrowingSerializer(borrowing).data,
+                status=status.HTTP_200_OK
+            )
+        except Borrowing.DoesNotExist:
+            return Response(
+                {"detail": "This book does not exist."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
