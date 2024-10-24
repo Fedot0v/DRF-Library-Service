@@ -36,18 +36,28 @@ class Borrowing(models.Model):
         ]
 
     def clean(self):
-        """Ensure that dates are logically consistent"""
-        if self.expected_return_date \
-                and self.expected_return_date <= self.borrow_date:
-            raise ValidationError(
-                "Expected return date must be later than borrowing date"
-            )
+        if self.book.inventory <= 0:
+            raise ValidationError("This book is currently not available.")
 
-        if self.actual_return_date \
-                and self.actual_return_date >= self.borrow_date:
-            raise ValidationError(
-                "Actual return date must be later than borrowing date"
-            )
+        if self.expected_return_date and self.expected_return_date <= self.borrow_date:
+            raise ValidationError("Expected return date must be later than borrowing date.")
+
+        if self.actual_return_date and self.actual_return_date >= self.borrow_date:
+            raise ValidationError("Actual return date must be later than borrowing date.")
+
+        if self.pk and self.actual_return_date is not None:
+            raise ValidationError("This book has already been returned.")
+
+
+    def save(self, *args, **kwargs):
+        if self.actual_return_date:
+            self.book.inventory += 1
+            self.book.save()
+
+        if not self.pk:
+            self.book.inventory -= 1
+            self.book.save()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.user} borrowed {self.book} on {self.borrow_date}"
