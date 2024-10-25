@@ -10,6 +10,8 @@ from borrowings.serializers import (
     BorrowingDetailSerializer
 )
 from borrowings.telegram_helper import send_telegram_message
+from payments.models import Payment
+from payments.stripe_helper import create_stripe_session
 
 
 class BorrowingViewSet(viewsets.ModelViewSet):
@@ -66,6 +68,30 @@ class BorrowingViewSet(viewsets.ModelViewSet):
                     {"detail": "This book has already been returned."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+
+            actual_return_date = timezone.now()
+            borrowing.actual_return_date = actual_return_date
+
+
+
+            if actual_return_date > borrowing.expected_return_date:
+                daily_fee = borrowing.book.daily_fee
+                fine_amount = Payment().calculate_fine(
+                    expected_return_date=borrowing.expected_return_date,
+                    actual_return_date=actual_return_date,
+                    daily_fee=daily_fee
+                )
+
+                session_url, session_id = create_stripe_session(fine_amount)
+
+                fine_payment = Payment.objects.create(
+                    status=Payment.StatusChoices.PENDING,
+                    type=Payment.TypeChoices.FINE,
+                    money_to_pay=fine_amount,
+                    session_url=session_url,
+                    session_id=session_id
+                )
+
             borrowing.actual_return_date = timezone.now()
             borrowing.book.inventory += 1
             borrowing.book.save()
