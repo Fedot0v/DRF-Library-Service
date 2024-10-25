@@ -1,5 +1,6 @@
 from django.utils import timezone
 from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from borrowings.models import Borrowing
@@ -8,6 +9,7 @@ from borrowings.serializers import (
     BorrowingListSerializer,
     BorrowingDetailSerializer
 )
+from borrowings.telegram_helper import send_telegram_message
 
 
 class BorrowingViewSet(viewsets.ModelViewSet):
@@ -16,7 +18,17 @@ class BorrowingViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        borrowing = serializer.save(user=self.request.user)
+
+        message = (
+            f"<b>New borrowing</b>\n"
+            f"<b>Book:</b> {borrowing.book.title}\n"
+            f"<b>User:</b> {borrowing.user.email}\n"
+            f"<b>Date of borrowing:</b> {borrowing.date_borrowed}\n"
+            f"<b>Expected return date:</b> {borrowing.expected_return_date}\n"
+        )
+
+        send_telegram_message(message)
 
     def get_queryset(self):
         queryset = self.queryset
@@ -45,6 +57,7 @@ class BorrowingViewSet(viewsets.ModelViewSet):
             return BorrowingDetailSerializer
         return BorrowingSerializer
 
+    @action(detail=True, methods=["post"])
     def return_book(self, request, pk=None):
         try:
             borrowing = self.get_object()
@@ -57,6 +70,13 @@ class BorrowingViewSet(viewsets.ModelViewSet):
             borrowing.book.inventory += 1
             borrowing.book.save()
             borrowing.save()
+
+            message = (
+                f"<b>Book has been returned</b>\n"
+                f"<b>Book:</b> {borrowing.book.title}\n"
+                f"<b>User:</b> {borrowing.user.email}\n"
+                f"<b>Return Date:</b> {borrowing.actual_return_date}\n"
+            )
 
             return Response(
                 BorrowingSerializer(borrowing).data,
