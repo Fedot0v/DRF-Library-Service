@@ -24,7 +24,11 @@ class PaymentViewSet(viewsets.ModelViewSet):
             return PaymentListSerializer
         return PaymentSerializer
 
-    @action(detail=True, methods=["get"])
+    @action(
+        detail=True, methods=["get"],
+        url_path="success",
+        url_name="payment-success"
+    )
     def success(self, request, pk=None):
         payment = self.get_object()
         payment.status = Payment.StatusChoices.PAID
@@ -33,7 +37,12 @@ class PaymentViewSet(viewsets.ModelViewSet):
             {"message": "Payment was successfully processed."},
             status=status.HTTP_200_OK
         )
-    @action(detail=True, methods=["get"])
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="cancel",
+        url_name="payment-cancel"
+    )
     def cancel(self, request, pk=None):
         return Response(
             {"message": "Payment was canceled."},

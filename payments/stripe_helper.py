@@ -44,8 +44,14 @@ def create_stripe_session(borrowing):
             }
         ],
         mode="payment",
-        success_url=request.build_absolute_uri(reverse("payment-success")),
-        cancel_url=request.build_absolute_uri(reverse("payment-cancel")),
+        success_url=request.build_absolute_uri(
+            reverse("payment-success",
+            kwargs={"pk": payment.id})
+        ),
+        cancel_url=request.build_absolute_uri(reverse(
+            "payment-cancel",
+            kwargs={"pk": payment.id})
+        ),
     )
 
     payment = Payment.objects.create(
