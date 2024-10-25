@@ -78,6 +78,8 @@ class BorrowingViewSet(viewsets.ModelViewSet):
                 f"<b>Return Date:</b> {borrowing.actual_return_date}\n"
             )
 
+            send_telegram_message(message)
+
             return Response(
                 BorrowingSerializer(borrowing).data,
                 status=status.HTTP_200_OK
