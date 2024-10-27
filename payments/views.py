@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -11,6 +12,11 @@ class PaymentViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
+    @extend_schema(
+        summary="Create a new payment",
+        description="Creates a new payment for the authenticated user.",
+        responses={201: PaymentSerializer},
+    )
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
@@ -24,6 +30,14 @@ class PaymentViewSet(viewsets.ModelViewSet):
             return PaymentListSerializer
         return PaymentSerializer
 
+    @extend_schema(
+        summary="Mark payment as successful",
+        description="Marks the payment as successfully processed."
+                    " Changes the status to 'PAID'.",
+        responses={200: OpenApiResponse(
+            description="Payment was successfully processed."
+        )}
+    )
     @action(
         detail=True, methods=["get"],
         url_path="success",
@@ -37,6 +51,12 @@ class PaymentViewSet(viewsets.ModelViewSet):
             {"message": "Payment was successfully processed."},
             status=status.HTTP_200_OK
         )
+
+    @extend_schema(
+        summary="Cancel a payment",
+        description="Indicates that the payment was canceled.",
+        responses={200: OpenApiResponse(description="Payment was canceled.")}
+    )
     @action(
         detail=True,
         methods=["get"],

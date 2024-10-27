@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import viewsets, permissions
 
 from books.models import Book
@@ -34,3 +35,30 @@ class BookViewSet(viewsets.ModelViewSet):
         if self.action == "list":
             return (permissions.AllowAny(),)
         return (permissions.IsAdminUser(),)
+
+    @extend_schema(
+        summary="Get list of books",
+        description="Return list of books, "
+                    "filtered by title, author and cover",
+        responses={200: BookListSerializer(many=True)},
+        parameters=[
+            OpenApiParameter(
+                name="title",
+                type={"type": "array", "items": {"type": "string"}},
+                description="Filter books by title (ex. ?title=It)",
+            ),
+            OpenApiParameter(
+                name="author",
+                type={"type": "array", "items": {"type": "string"}},
+                description="Filter books by author "
+                            "(ex. ?author=Stephen King)",
+            ),
+            OpenApiParameter(
+                name="cover",
+                type={"type": "string", "enum": ["Hard", "Soft"]},
+                description="Filter books by cover (ex. ?cover=Hard)",
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
