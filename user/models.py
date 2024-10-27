@@ -42,3 +42,10 @@ class User(AbstractBaseUser):
     first_name = models.CharField(_("first_name"), max_length=50)
     last_name = models.CharField(_("last_name"), max_length=50)
     is_staff = models.BooleanField(_("is_staff"), default=False)
+
+    USERNAME_FIELD = 'email'
+
+    objects = UserManager()
+
+    def __str__(self):
+        return self.email
