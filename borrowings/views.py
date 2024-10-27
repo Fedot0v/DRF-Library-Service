@@ -1,4 +1,5 @@
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -19,6 +20,12 @@ class BorrowingViewSet(viewsets.ModelViewSet):
     serializer_class = BorrowingSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
+    @extend_schema(
+        summary="Create new borrowing",
+        description="Creates a new borrowing record for the currently"
+                    " authorized user and sends a message to Telegram.",
+        responses={201: BorrowingSerializer}
+    )
     def perform_create(self, serializer):
         borrowing = serializer.save(user=self.request.user)
 
@@ -59,6 +66,20 @@ class BorrowingViewSet(viewsets.ModelViewSet):
             return BorrowingDetailSerializer
         return BorrowingSerializer
 
+    @extend_schema(
+        summary="Return book",
+        description="Marks the book as returned. If returned late, a penalty"
+                    " payment is generated through Stripe.",
+        responses={
+            200: OpenApiResponse(
+                response=BorrowingSerializer,
+                description="Info about borrowing"
+            ),
+            400: OpenApiResponse(
+                description="Book already returned or doesn't exist"
+            )
+        },
+    )
     @action(detail=True, methods=["post"])
     def return_book(self, request, pk=None):
         try:
@@ -115,3 +136,26 @@ class BorrowingViewSet(viewsets.ModelViewSet):
                 {"detail": "This book does not exist."},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+    @extend_schema(
+        summary="Get list of borrowings",
+        description="Returns a list of borrowings. For ordinary users - only"
+                    " their borrowings."
+                    "For superusers - you can filter by the `is_active` and "
+                    "`user_id` parameters.",
+        parameters=[
+            OpenApiParameter(
+                "is_active",
+                bool,
+                description=(
+                        "Filter by activity status (true or false)"
+                ),
+
+            ),
+            OpenApiParameter("user_id", int, description=(
+                    "Filter by user ID (superusers only)"
+            ))
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
