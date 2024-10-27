@@ -24,12 +24,14 @@ class Borrowing(models.Model):
         constraints = [
             models.CheckConstraint(
                 check=models.Q(
-                    expected_return_date_gt=models.F("borrow_date")
+                    expected_return_date__gt=models.F("borrow_date")
                 ),
                 name="expected_return_date_after_borrow_date"
             ),
             models.CheckConstraint(
-                check=models.Q(actual_return_date_gte=models.F("borrow_date"))
+                check=models.Q(
+                    actual_return_date__gte=models.F("borrow_date")
+                )
                       | models.Q(actual_return_date__isnull=True),
                 name="actual_return_date_after_borrow_date_or_null"
             ),
@@ -39,11 +41,17 @@ class Borrowing(models.Model):
         if self.book.inventory <= 0:
             raise ValidationError("This book is currently not available.")
 
-        if self.expected_return_date and self.expected_return_date <= self.borrow_date:
-            raise ValidationError("Expected return date must be later than borrowing date.")
+        if self.expected_return_date \
+                and self.expected_return_date <= self.borrow_date:
+            raise ValidationError(
+                "Expected return date must be later than borrowing date."
+            )
 
-        if self.actual_return_date and self.actual_return_date >= self.borrow_date:
-            raise ValidationError("Actual return date must be later than borrowing date.")
+        if self.actual_return_date \
+                and self.actual_return_date >= self.borrow_date:
+            raise ValidationError(
+                "Actual return date must be later than borrowing date."
+            )
 
         if self.pk and self.actual_return_date is not None:
             raise ValidationError("This book has already been returned.")
