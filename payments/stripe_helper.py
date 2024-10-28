@@ -1,4 +1,4 @@
-from audioop import reverse
+from django.urls import reverse
 
 import stripe
 from django.conf import settings
@@ -9,7 +9,7 @@ from payments.models import Payment
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
-def create_stripe_session(borrowing):
+def create_stripe_session(borrowing, request):
     book = borrowing.book
     daily_fee = book.daily_fee
     expected_return_date = borrowing.expected_return_date
@@ -31,26 +31,22 @@ def create_stripe_session(borrowing):
 
     session = stripe.checkout.Session.create(
         payment_method_types=["card"],
-        line_items=[
-            {
-                "price_data": {
-                    "currency": "usd",
-                    "product_data": {
-                        "name": f"Borrowing of {book.title}",
-                    },
-                    "unit_amount": int(total_money_to_pay * 100),
+        line_items=[{
+            "price_data": {
+                "currency": "usd",
+                "product_data": {
+                    "name": f"Borrowing of {book.title}",
                 },
-                "quantity": 1,
-            }
-        ],
+                "unit_amount": int(total_money_to_pay * 100),
+            },
+            "quantity": 1,
+        }],
         mode="payment",
         success_url=request.build_absolute_uri(
-            reverse("payment-success",
-            kwargs={"pk": payment.id})
+            reverse("payments:payment-success", kwargs={"pk": 0})
         ),
         cancel_url=request.build_absolute_uri(reverse(
-            "payment-cancel",
-            kwargs={"pk": payment.id})
+            "payments:payment-cancel", kwargs={"pk": 0})
         ),
     )
 
@@ -62,4 +58,4 @@ def create_stripe_session(borrowing):
         money_to_pay=total_money_to_pay,
     )
 
-    return session.url
+    return session.url, session.id
