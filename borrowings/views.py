@@ -33,7 +33,7 @@ class BorrowingViewSet(viewsets.ModelViewSet):
             f"<b>New borrowing</b>\n"
             f"<b>Book:</b> {borrowing.book.title}\n"
             f"<b>User:</b> {borrowing.user.email}\n"
-            f"<b>Date of borrowing:</b> {borrowing.date_borrowed}\n"
+            f"<b>Date of borrowing:</b> {borrowing.borrow_date}\n"
             f"<b>Expected return date:</b> {borrowing.expected_return_date}\n"
         )
 
@@ -90,32 +90,11 @@ class BorrowingViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            actual_return_date = timezone.now()
+            actual_return_date = timezone.now().date()
             borrowing.actual_return_date = actual_return_date
 
+            session_url, session_id = create_stripe_session(borrowing, request)
 
-
-            if actual_return_date > borrowing.expected_return_date:
-                daily_fee = borrowing.book.daily_fee
-                fine_amount = Payment().calculate_fine(
-                    expected_return_date=borrowing.expected_return_date,
-                    actual_return_date=actual_return_date,
-                    daily_fee=daily_fee
-                )
-
-                session_url, session_id = create_stripe_session(fine_amount)
-
-                fine_payment = Payment.objects.create(
-                    status=Payment.StatusChoices.PENDING,
-                    type=Payment.TypeChoices.FINE,
-                    money_to_pay=fine_amount,
-                    session_url=session_url,
-                    session_id=session_id
-                )
-
-            borrowing.actual_return_date = timezone.now()
-            borrowing.book.inventory += 1
-            borrowing.book.save()
             borrowing.save()
 
             message = (
@@ -128,7 +107,7 @@ class BorrowingViewSet(viewsets.ModelViewSet):
             send_telegram_message(message)
 
             return Response(
-                BorrowingSerializer(borrowing).data,
+                {"session_url": session_url},
                 status=status.HTTP_200_OK
             )
         except Borrowing.DoesNotExist:
@@ -136,7 +115,6 @@ class BorrowingViewSet(viewsets.ModelViewSet):
                 {"detail": "This book does not exist."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
     @extend_schema(
         summary="Get list of borrowings",
         description="Returns a list of borrowings. For ordinary users - only"
