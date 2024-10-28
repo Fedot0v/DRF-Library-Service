@@ -41,6 +41,7 @@ class User(AbstractBaseUser):
     email = models.EmailField(_("email address"), unique=True)
     first_name = models.CharField(_("first_name"), max_length=50)
     last_name = models.CharField(_("last_name"), max_length=50)
+    is_superuser = models.BooleanField(_("superuser"), default=False)
     is_staff = models.BooleanField(_("is_staff"), default=False)
 
     USERNAME_FIELD = 'email'
