@@ -41,7 +41,6 @@ class PaymentViewSet(viewsets.ModelViewSet):
     @action(
         detail=True, methods=["get"],
         url_path="success",
-        url_name="payment-success"
     )
     def success(self, request, pk=None):
         payment = self.get_object()
@@ -61,7 +60,6 @@ class PaymentViewSet(viewsets.ModelViewSet):
         detail=True,
         methods=["get"],
         url_path="cancel",
-        url_name="payment-cancel"
     )
     def cancel(self, request, pk=None):
         return Response(
