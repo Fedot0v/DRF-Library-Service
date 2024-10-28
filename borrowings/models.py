@@ -60,11 +60,11 @@ class Borrowing(models.Model):
     def save(self, *args, **kwargs):
         if self.actual_return_date:
             self.book.inventory += 1
-            self.book.save()
 
-        if not self.pk:
+        elif not self.pk:
             self.book.inventory -= 1
-            self.book.save()
+
+        self.book.save()
         super().save(*args, **kwargs)
 
     def __str__(self):
